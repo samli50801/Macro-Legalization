@@ -6,6 +6,7 @@
 #include "legalizer.h"
 #include "cluster.h"
 #include "CG.h"
+#include "bufferLegalizer.h"
 #include <time.h> // includes clock_t and CLOCKS_PER_SEC
 
 //ps_context *context; // Draw Design
@@ -18,6 +19,7 @@ vector<Component*> comp;					// All component
 unordered_set<Component*> free_space;		// All the space which can place standard cell
 unordered_set<Component*> not_free_space;	// All the space which can't place standard cell
 vector<Component*> boundaryComp;
+vector<Component*> illegal;
 
 vector<Bound*> bound;						// Segments of the design boundary
 
@@ -71,18 +73,10 @@ int main(int argc, char* argv[])
 	duration_sec = double(end-start) / CLOCKS_PER_SEC;	// time
 	Log << "Force-directed: " << duration_sec << "sec" << endl;
 
-	bc::BestChoiceCluster cluster(comp, parser);
-	cluster.setDesignWidth(parser.maxOfWidth - parser.minOfWidth);
-	cluster.setDesignHeight(parser.maxOfHeight - parser.minOfHeight);
-	cluster.setLongestTokenLength(parser.longestTokenLength);
-	//cluster.bestChoiceClustering();
-	//cluster.printGroups();
-	//groups = cluster.getGroups();
-
 	cg::CG cg(comp, boundaryComp, parser);
 	cg.legalize();
+	cg.optBufferArea();
 	deletePoint = cg.deletedPoint;		// Debug
-		
 
     //plot(preprocessor.getBoundingRect());
     //parser.score_evaluation(comp, not_free_space);
@@ -99,10 +93,12 @@ int main(int argc, char* argv[])
 	Log << "corner-stitch: " << duration_sec << "sec" << endl;
     //legalizer.plot();
 
-	FreeSpace fs(comp, bound, parser);
-	fs.findFreeSpace();
-	free_space = fs.getFreeSpace();
-	not_free_space = fs.getNotFreeSpace();
+	buffer::BufferLegalizer bufferLegalizer(bound, comp, boundaryComp, parser);
+	bufferLegalizer.legalize();
+	illegal = bufferLegalizer.getIllegal();
+	free_space = bufferLegalizer.getFreeSpace();
+	not_free_space = bufferLegalizer.getDeadSpace();
+	deletePoint = bufferLegalizer.getDeletedComp();		// Debug
 
 	/*check if the final placement is legal (no overlappings) */
 	fd.generate_overlap_group();		// Generate overlapped group
@@ -260,6 +256,32 @@ void plot(Rectangle boundingRect){
 	
 		index++;  
 	}
+
+	for (auto it = illegal.begin(); it != illegal.end(); ++it) {
+		int x0 = (*it)->get_ll_x();
+	    int y0 =  (*it)->get_ll_y();
+		int x1 = (*it)->get_ur_x();
+		int y1 = (*it)->get_ur_y();
+		int midX = (x0+x1)/2;
+		int midY = (y0+y1)/2;
+		outgraph << "set object " << index << " rect from " 
+		  	<< x0 << "," << y0 << " to " << x1 << "," << y1 << " fc rgb 'purple'\n";
+	
+		index++;  
+	}
+
+	/*for (auto it = free_space.begin(); it != free_space.end(); ++it) {
+		int x0 = (*it)->get_ll_x();
+	    int y0 =  (*it)->get_ll_y();
+		int x1 = (*it)->get_ur_x();
+		int y1 = (*it)->get_ur_y();
+		int midX = (x0+x1)/2;
+		int midY = (y0+y1)/2;
+		outgraph << "set object " << index << " rect from " 
+		  	<< x0 << "," << y0 << " to " << x1 << "," << y1 << " fc rgb 'green'\n";
+	
+		index++;  
+	}*/
 
 	fstream outline("line", ios::out);
 

@@ -42,8 +42,8 @@ FreeSpace::insertFreeSpace(int lower_x, int lower_y, int width, int height, bool
 	if (type == V) {
 		if (add_fs->width < parser._pwc * parser.dbuPerMicron) 
 			not_free_space.insert(add_fs);
-		else 
-			free_space.insert(add_fs);
+		/*else 
+			free_space.insert(add_fs);*/
 	}
 	else if (type == H) {
 		if (add_fs->height < parser._pwc * parser.dbuPerMicron)
@@ -294,6 +294,8 @@ FreeSpace::vertical_freeSpace()
 	}
 
 	for (vector<Component*>::iterator i = comp.begin(); i != comp.end(); i++) {
+		if (std::find(_deletedComp.begin(), _deletedComp.end(), *i) != _deletedComp.end())
+			continue;
 		event.push(Event(*i, true, (*i)->get_ll_y()));
 		event.push(Event(*i, false, (*i)->get_ur_y()));
 	}
@@ -485,6 +487,8 @@ FreeSpace::horizon_freeSpace()
 	}
 
 	for (vector<Component*>::iterator i = comp.begin(); i != comp.end(); i++) {
+		if (std::find(_deletedComp.begin(), _deletedComp.end(), *i) != _deletedComp.end())
+			continue;
 		event.push(Event(*i, true, (*i)->get_ll_x()));
 		event.push(Event(*i, false, (*i)->get_ur_x()));
 	}
@@ -635,6 +639,8 @@ FreeSpace::horizon_freeSpace()
 void 
 FreeSpace::findFreeSpace()
 {	
+	free_space.clear();
+	not_free_space.clear();
 	opt = false;
 	for (size_t i = 0; i < 2; ++i) {
 		vertical_freeSpace();

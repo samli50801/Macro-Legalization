@@ -17,15 +17,15 @@ class Preprocessor{
 
         void run();
 
+    private:
+        void buildBoundingRect();
+        void buildBoundaryTile();
+
         /* use sweep line to generate boundary component*/
         void insertBoundaryCompnent(int lower_x, int lower_y, int width, int height, vector<Component*>&);
         void buildInsideBoundaryComponent(vector<Component*> &);
 	    void buildOutsideBoundaryComponent(vector<Component*> &);
 	    void buildBoundaryComponent();  
-
-    private:
-        void buildBoundingRect();
-        void buildBoundaryTile();
 
         /* preprocessor member variables */
         Parser&             _parser;        // parser reference

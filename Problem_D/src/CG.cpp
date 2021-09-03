@@ -5,6 +5,7 @@
 using namespace cg;
 
 bool CG::startBufferAreaOpt = false;
+bool CG::startBufferAreaLeg = false;
 vector<Component*> CG::lastDeletedPoint;
 
 bool AreaComp(const Point* a, const Point* b) {
@@ -428,9 +429,6 @@ int CG::getHLongestPath(Point* start, Point *(&end))
     Q.push(start->_no);
     start->_criticalHParent = NULL;
 
-    /* check if macros touch the fixed block's buttom */
-    bool legal = true;
-
     size_t index;
     Point *p;
 
@@ -443,9 +441,8 @@ int CG::getHLongestPath(Point* start, Point *(&end))
         if (p->_comp->type == FIXED && p != _hsource && p != _hsink) {
             //check if macros touch the fixed block's left side 
             if (latestStart[index] > p->_comp->_llx) {
-                legal = false;
                 end = p;
-                break;
+                return p->_comp->_llx - latestStart[index];
             }
             else
                 latestStart[index] = p->_comp->_llx;
@@ -454,17 +451,17 @@ int CG::getHLongestPath(Point* start, Point *(&end))
         for (vector<pair<size_t, int>>::iterator it = p->_right.begin(); it != p->_right.end(); it++) {
             size_t rIndex = it->first;
             if (latestStart[index] + it->second >= latestStart[rIndex]) {
+                
                 latestStart[rIndex] = latestStart[index] + it->second;
                 _pointVec[rIndex]->_criticalHParent = p;
             }
 
-            if (++inDegree[rIndex] == _pointVec[rIndex]->_left.size()) 
+            if (++inDegree[rIndex] == _pointVec[rIndex]->_left.size() || p == start) 
                 Q.push(rIndex);
-
         }
     }
 
-    return legal? latestStart[_hsink->_no] : INT_MAX;
+    return _designRight - latestStart[_hsink->_no];
 }
 
 int CG::getVLongestPath(Point* start, Point *(&end))
@@ -483,9 +480,6 @@ int CG::getVLongestPath(Point* start, Point *(&end))
     Q.push(start->_no);
     start->_criticalVParent = NULL;
 
-    /* check if macros touch the fixed block's buttom */
-    bool legal = true;
-
     size_t index;
     Point *p;
 
@@ -498,9 +492,8 @@ int CG::getVLongestPath(Point* start, Point *(&end))
         if (p->_comp->type == FIXED && p != _vsource && p != _vsink) {
             // check if macros touch the fixed block's buttom 
             if (latestStart[index] > p->_comp->_lly) {
-                legal = false;
                 end = p;
-                break;
+                return p->_comp->_lly - latestStart[index];
             }
             else
                 latestStart[index] = p->_comp->_lly;
@@ -513,12 +506,107 @@ int CG::getVLongestPath(Point* start, Point *(&end))
                 _pointVec[uIndex]->_criticalVParent = p;
             }
 
-            if (++inDegree[uIndex] == _pointVec[uIndex]->_down.size())
+            if (++inDegree[uIndex] == _pointVec[uIndex]->_down.size() || p == start)
                 Q.push(uIndex);
         }
     }
 
-    return legal? latestStart[_vsink->_no] : INT_MAX;
+    return _designUp - latestStart[_vsink->_no];
+}
+
+int CG::getHInverseLongestPath(Point* start, Point*& end) 
+{
+    /* using topology sort */
+    end = _hsource;
+
+    queue<size_t> Q;
+    int inDegree[_pointVec.size()];
+    memset(inDegree, 0, _pointVec.size()*sizeof(int));
+
+    int latestStart[_pointVec.size()];
+    std::fill_n(latestStart, _pointVec.size(), start->_comp->get_ll_x());
+
+    /* set start point */
+    Q.push(start->_no);
+
+    size_t index;
+    Point *p;
+
+    while (!Q.empty()) {
+
+        index = Q.front();
+        p = _pointVec[index];
+        Q.pop();
+
+        if (p->_comp->type == FIXED && p != _hsource && p != _hsink) {
+            //check if macros touch the fixed block's left side 
+            if (latestStart[index] < p->_comp->_llx) {
+                end = p;
+                return latestStart[index] - p->_comp->_llx;
+            }
+            else
+                latestStart[index] = p->_comp->_llx;
+        }
+
+        for (vector<pair<size_t, int>>::iterator it = p->_left.begin(); it != p->_left.end(); it++) {
+            size_t lIndex = it->first;
+            if (latestStart[index] - it->second <= latestStart[lIndex]) 
+                latestStart[lIndex] = latestStart[index] - it->second;
+
+            if (++inDegree[lIndex] == _pointVec[lIndex]->_right.size() || p == start) 
+                Q.push(lIndex);
+        }
+    }
+    
+    return latestStart[_hsource->_no] - _designLeft;
+}
+
+int CG::getVInverseLongestPath(Point* start, Point*& end)
+{
+    /* using topology sort */
+    end = _vsource;
+
+    queue<size_t> Q;
+    int inDegree[_pointVec.size()];
+    memset(inDegree, 0, _pointVec.size()*sizeof(int));
+
+    int latestStart[_pointVec.size()];
+    std::fill_n(latestStart, _pointVec.size(), start->_comp->get_ll_y());
+
+    /* set start point */
+    Q.push(start->_no);
+
+    size_t index;
+    Point *p;
+
+    while (!Q.empty()) {
+
+        index = Q.front();
+        p = _pointVec[index];
+        Q.pop();
+
+        if (p->_comp->type == FIXED && p != _vsource && p != _vsink) {
+            // check if macros touch the fixed block's buttom 
+            if (latestStart[index] < p->_comp->_lly) {
+                end = p;
+                return latestStart[index] - p->_comp->_lly;
+            }
+            else
+                latestStart[index] = p->_comp->_lly;
+        }
+
+        for (vector<pair<size_t, int>>::iterator it = p->_down.begin(); it != p->_down.end(); it++) {
+            size_t dIndex = it->first;
+            if (latestStart[index] - it->second <= latestStart[dIndex]) {
+                latestStart[dIndex] = latestStart[index] - it->second;
+            }
+
+            if (++inDegree[dIndex] == _pointVec[dIndex]->_up.size() || p == start)
+                Q.push(dIndex);
+        }
+    }
+
+    return latestStart[_vsource->_no] - _designDown;
 }
 
 void CG::deleteEdge(vector<pair<size_t, int>>& adjEdge, size_t no)
@@ -958,7 +1046,6 @@ void CG::solveLPbyCG()
 
             // add the row to lpsolve 
             add_constraintex(lp, j, row, colno, GE, (*r).second);
-            //add_constraintex(lp, j, row, colno, EQ, (*r).second);
         }
     }
     /* up constraint*/  
@@ -983,7 +1070,6 @@ void CG::solveLPbyCG()
 
             // add the row to lpsolve 
             add_constraintex(lp, j, row, colno, GE, (*u).second);
-            //add_constraintex(lp, j, row, colno, EQ, (*u).second);
 
         }
     }
@@ -995,12 +1081,18 @@ void CG::solveLPbyCG()
         j = 0;
         colno[j] = index + 1;
         row[j++] = 1;
-        add_constraintex(lp, j, row, colno, EQ, _pointVec[i]->_comp->_originX);
+        if (startBufferAreaLeg)
+            add_constraintex(lp, j, row, colno, EQ, _pointVec[i]->_comp->_llx);
+        else
+            add_constraintex(lp, j, row, colno, EQ, _pointVec[i]->_comp->_originX);
 
         j = 0;
         colno[j] = index + 2;
         row[j++] = 1;
-        add_constraintex(lp, j, row, colno, EQ, _pointVec[i]->_comp->_originY);
+        if (startBufferAreaLeg)
+            add_constraintex(lp, j, row, colno, EQ, _pointVec[i]->_comp->_lly);
+        else 
+            add_constraintex(lp, j, row, colno, EQ, _pointVec[i]->_comp->_originY);
     }
 
     /* absolute setting*/
@@ -1462,7 +1554,7 @@ void CG::legalizeCriticalPath()
     longestVPath = getVLongestPath(_vsource, v_end);
     cout << "longest V path: " << longestVPath << " / " << _designUp << endl;
     
-    while (longestHPath > _designRight) {
+    while (longestHPath < 0) {
         /* extract the macros in critical path */
         vector<Point*> criticalList;
         Point *current = h_end;
@@ -1515,7 +1607,7 @@ void CG::legalizeCriticalPath()
         longestHPath = getHLongestPath(_hsource, h_end);
     }
 
-    while (longestVPath > _designUp) {
+    while (longestVPath < 0) {
 
         /* extract the macros in critical path */
         vector<Point*> criticalList;
@@ -1682,17 +1774,191 @@ void CG::legalize()
 
     } while(lastDeletedPoint != deletedPoint && lp_runtime < 180.0);
 
+}
+
+void CG::optBufferArea()
+{
+    /* reset source*/
+    delete _hsource;
+    _hsource = NULL;
+    delete _vsource;
+    _vsource = NULL;
+    delete _hsink;
+    _hsink = NULL;
+    delete _vsink;
+    _vsink = NULL;
+
+    startBufferAreaOpt = true;
     /* optimize dead space*/
     //initialize
     initialize();
-    startBufferAreaOpt = true;
     // build TCG 
     buildGraph();
     deletedPoint.clear();
-    // delete point to make TCG fit in the boundary 
+    // delete point to make TCG fit in the boundary
     legalizeCriticalPath();
     // linear programming solver 
     solveLPbyCG();
     stickToBoundary();
+    startBufferAreaOpt = false;
+}
 
+void CG::leaveSpaceForBufferArea(vector<Component*>& illegal)
+{
+    cout << "\n----- leaveSpaceForBufferArea -----\n";
+    int designWidth = _designRight - _designLeft;
+    int designHeight = _designUp - _designDown;
+    int longestHPath;
+    int longestVPath;
+    int longestHInversePath;
+    int longestVInversePath;
+    Point *h_end, *v_end;
+
+    for (vector<Component*>::iterator it = illegal.begin(); it != illegal.end(); ++it) {
+        size_t index = std::find(_compVec.begin(), _compVec.end(), *it) - _compVec.begin();
+        cout << _pointVec[index]->_comp->name << endl;
+        longestHPath = getHLongestPath(_pointVec[index], h_end);
+        longestVPath = getVLongestPath(_pointVec[index], v_end);
+        longestHInversePath = getHInverseLongestPath(_pointVec[index], h_end);
+        longestVInversePath = getVInverseLongestPath(_pointVec[index], v_end);
+        cout << "longestHPath source: " << longestHPath << " / " << _designRight << endl;
+        cout << "longestVPath source: " << longestVPath << " / " << _designUp << endl;
+        cout << "longestHInversePath source: " << longestHInversePath << " / " << _designLeft << endl;
+        cout << "longestVInversePath source: " << longestVInversePath << " / " << _designDown << endl;
+
+        int bigestSlack = longestHPath;
+        if (longestVPath > bigestSlack)
+            bigestSlack = longestVPath;
+        if (longestHInversePath > bigestSlack)
+            bigestSlack = longestHInversePath;
+        if (longestVInversePath > bigestSlack)
+            bigestSlack = longestVInversePath;
+        
+        if (bigestSlack == longestHPath) {
+            for (vector<pair<size_t, int>>::iterator r = _pointVec[index]->_right.begin(); r != _pointVec[index]->_right.end(); ++r) {
+                int overlapLength = std::max(0, 
+                min(_pointVec[index]->_comp->get_ur_y(), _pointVec[r->first]->_comp->get_ur_y()) - max(_pointVec[index]->_comp->get_ll_y(), _pointVec[r->first]->_comp->get_ll_y()));
+                int dis = _pointVec[r->first]->_comp->get_ll_x() - _pointVec[index]->_comp->get_ur_x();
+                if (overlapLength > 0 && dis < _pwc) {
+                    r->second = _pointVec[index]->_comp->getWidth() + _pwc;
+                }
+            }
+        }
+        else if (bigestSlack == longestVPath) {
+            for (vector<pair<size_t, int>>::iterator u = _pointVec[index]->_up.begin(); u != _pointVec[index]->_up.end(); ++u) {
+                int overlapLength = std::max(0, 
+                min(_pointVec[index]->_comp->get_ur_x(), _pointVec[u->first]->_comp->get_ur_x()) - max(_pointVec[index]->_comp->get_ll_x(), _pointVec[u->first]->_comp->get_ll_x()));
+                int dis = _pointVec[u->first]->_comp->get_ll_y() - _pointVec[index]->_comp->get_ur_y();
+                if (overlapLength > 0 && dis < _pwc) {
+                    u->second = _pointVec[index]->_comp->getHeight() + _pwc;
+                }
+            }
+        }
+        else if (bigestSlack == longestHInversePath) {
+            for (vector<pair<size_t, int>>::iterator l = _pointVec[index]->_left.begin(); l != _pointVec[index]->_left.end(); ++l) {
+                for (vector<pair<size_t, int>>::iterator lr = _pointVec[l->first]->_right.begin(); lr != _pointVec[l->first]->_right.end(); ++lr) {
+                    if (lr->first == index) {
+                        int overlapLength = std::max(0, 
+                        min(_pointVec[l->first]->_comp->get_ur_y(), _pointVec[index]->_comp->get_ur_y()) - max(_pointVec[l->first]->_comp->get_ll_y(), _pointVec[index]->_comp->get_ll_y()));
+                        int dis = _pointVec[index]->_comp->get_ll_x() - _pointVec[l->first]->_comp->get_ur_x();
+                        if (overlapLength > 0 && dis < _pwc) {
+                            lr->second = _pointVec[l->first]->_comp->getWidth() + _pwc;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        else if (bigestSlack == longestVInversePath) {
+            for (vector<pair<size_t, int>>::iterator d = _pointVec[index]->_down.begin(); d != _pointVec[index]->_down.end(); ++d) {
+                for (vector<pair<size_t, int>>::iterator du = _pointVec[d->first]->_up.begin(); du != _pointVec[d->first]->_up.end(); ++du) {
+                    if (du->first == index) {
+                        int overlapLength = std::max(0, 
+                        min(_pointVec[d->first]->_comp->get_ur_x(), _pointVec[index]->_comp->get_ur_x()) - max(_pointVec[d->first]->_comp->get_ll_x(), _pointVec[index]->_comp->get_ll_x()));
+                        int dis = _pointVec[index]->_comp->get_ll_y() - _pointVec[d->first]->_comp->get_ur_y();
+                        if (overlapLength > 0 && dis < _pwc) {
+                            du->second = _pointVec[d->first]->_comp->getHeight() + _pwc;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // update longest path length 
+    longestHPath = getHLongestPath(_hsource, h_end);
+    cout << "longest H path: " << longestHPath << " / " << _designRight << endl;
+    longestVPath = getVLongestPath(_vsource, v_end);
+    cout << "longest V path: " << longestVPath << " / " << _designUp << endl;
+    
+    while (longestHPath < 0) {
+        // extract the macros in critical path 
+        vector<Point*> criticalList;
+        Point *current = h_end;
+        cout << endl << longestHPath << " / " << _designRight << endl;
+        cout << "criticalList H start: \n";
+        while ((current = current->_criticalHParent)->_comp->getType() != FIXED) {
+            cout << current->_comp->name << endl;
+            criticalList.push_back(current);
+        }
+        cout << "criticalList H end: \n";
+
+        // select the macro with smallest area
+        std::vector<Point*>::iterator victimPoint = getBestCandidate(criticalList);
+        deletePoint(*victimPoint, H);
+
+        longestHPath = getHLongestPath(_hsource, h_end);
+    }
+
+    while (longestVPath < 0) {
+
+        // extract the macros in critical path 
+        vector<Point*> criticalList;
+        Point *current = v_end;    // the start point of critical path
+        cout << endl << longestVPath << " / " << _designUp << endl;
+        cout << "criticalList V start: \n";
+        while ((current = current->_criticalVParent)->_comp->getType() != FIXED) {
+            cout << current->_comp->name << endl;
+            criticalList.push_back(current);
+        }
+        cout << "criticalList V end: \n";
+
+        std::vector<Point*>::iterator victimPoint = getBestCandidate(criticalList);
+        deletePoint(*victimPoint, V);
+        longestVPath = getVLongestPath(_vsource, v_end);
+    }
+    
+
+    /* Debug */
+    /*longestHPath = getHLongestPath(_hsource, h_end);
+    cout << "final H critical length: " << longestHPath << " / " << _designRight << endl;
+    longestVPath = getVLongestPath(_vsource, v_end);
+    cout << "final V critical length: " << longestVPath << " / " << _designUp << endl;*/
+}
+
+void CG::legalizeBufferConstraint(vector<Component*>& illegal)
+{
+    startBufferAreaLeg = true;
+
+    initialize();
+    // build TCG 
+    buildGraph();
+    deletedPoint.clear();
+    // delete point to make TCG fit in the boundary 
+    leaveSpaceForBufferArea(illegal);
+    // linear programming solver 
+    solveLPbyCG();
+
+    /* reset */
+    delete _hsource;
+    _hsource = NULL;
+    delete _vsource;
+    _vsource = NULL;
+    delete _hsink;
+    _hsink = NULL;
+    delete _vsink;
+    _vsink = NULL;
+
+    startBufferAreaLeg = false;
 }

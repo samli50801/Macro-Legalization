@@ -21,6 +21,7 @@ namespace cg {
         std::vector<pair<size_t, int>> _left, _right;
         std::vector<pair<size_t, int>> _down, _up;
         Point *_criticalHParent, *_criticalVParent;
+        Point *_criticalHInverseParent, *_criticalVInverseParent;
     };
 
     class CG {
@@ -48,6 +49,8 @@ namespace cg {
 
         int getHLongestPath(Point*, Point*&);
         int getVLongestPath(Point*, Point*&);
+        int getHInverseLongestPath(Point*, Point*&);
+        int getVInverseLongestPath(Point*, Point*&);
         int getRelation(Point*, Point*);
 
         /* operation */
@@ -63,6 +66,9 @@ namespace cg {
 
         void legalizeCriticalPath();
         void legalize();
+        void optBufferArea();
+        void legalizeBufferConstraint(vector<Component*>&);
+        void leaveSpaceForBufferArea(vector<Component*>&);
         bool optimizeBufferArea(Point*, Point*, bool);
         void optDeadSpace();
         void stickToBoundary();
@@ -89,7 +95,9 @@ namespace cg {
         vector<Component*> swappedPoint;
 
     public:
-	    static bool startBufferAreaOpt;//static member variable
+        /* static member variable*/
+	    static bool startBufferAreaOpt;
+        static bool startBufferAreaLeg;
         static vector<Component*> lastDeletedPoint;
     };
 

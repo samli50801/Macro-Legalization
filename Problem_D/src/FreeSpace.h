@@ -7,7 +7,10 @@ class FreeSpace
 {
 public:
 
-	FreeSpace(vector<Component*>& c, vector<Bound*>& b, Parser& p) : comp(c), bound(b), parser(p) {	opt = true; }
+	FreeSpace(vector<Component*>& c, vector<Bound*>& b, Parser& p, vector<Component*>& deletedComp) : 
+	comp(c), bound(b), parser(p), _deletedComp(deletedComp)
+	{ opt = true; }
+	
 	~FreeSpace() {}
 
 	// Get
@@ -30,6 +33,7 @@ public:
 	Parser& parser;
 	vector<Component*>& comp;
 	vector<Bound*>& bound;
+	vector<Component*>& _deletedComp;
 	unordered_set<Component*> free_space;
 	unordered_set<Component*> not_free_space;
 

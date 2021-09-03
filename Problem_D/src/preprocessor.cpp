@@ -10,8 +10,13 @@
 void Preprocessor::run(){
     /* build the bounding box of the design */
     buildBoundingRect();
+
     /* build the tile plane with _boundingRect */
     _plane = new Plane(_boundingRect);
+
+    /* build the boundary component */
+    buildBoundaryComponent();
+
     /* build the boundary tiles in _plane */
     buildBoundaryTile();
 }
@@ -79,73 +84,22 @@ void Preprocessor::buildBoundingRect(){
 
 /*
  *
- * build boundary tile on _plane when the boundary shape is rectilinear.
+ * build boundary tile on _plane using boundary component.
  *
  */
 void Preprocessor::buildBoundaryTile(){
-    cout << "\n----- In buildBoundaryTile function -----\n";
 
-    size_t boundVecSize = _boundVec.size();
+    /* each boundary component constructs a boundary tile in _plane */
+    Rectangle boundaryRect;
+    for(size_t i = 0; i < _boundaryComp.size(); ++i){
+        boundaryRect.set4Side(_boundaryComp[i]->get_ll_x(),
+                _boundaryComp[i]->get_ll_y(),
+                _boundaryComp[i]->get_ur_x(),
+                _boundaryComp[i]->get_ur_y());
 
-    /*vector<pair<int, int>> eventPoint;
+        Tile* boundaryTile =CornerStitch::insertTile(&boundaryRect, _plane);
 
-    for(size_t i = 0; i < boundVecSize; ++i){
-        int direction = _boundVec[i]->getRelation();
-        if(direction == UP || direction == DOWN){
-            eventPoint.push_back(pair<int, int>(_boundVec[i]->getPos(), i));
-        }            
-    }
-
-    std::sort(eventPoint.begin(), eventPoint.end());
-
-    for(size_t i = 0; i < eventPoint.size(); ++i){
-        int boundIndex = eventPoint[i].second;
-        int prevBoundIndex = (boundIndex - 1 >= 0) ? boundIndex - 1 : boundVecSize - 1;
-        int nextBoundIndex = (boundIndex + 1 < boundVecSize) ? boundIndex + 1 : 0;
-
-        Bound *bound = _boundVec[boundIndex];
-        Bound *prevBound = _boundVec[prevBoundIndex];
-        Bound *nextBound = _boundVec[nextBoundIndex];
-
-        cout << "current bound: " << bound->start << " " << bound->end << " " << bound->pos << endl;
-        cout << "prev bound: " << prevBound->start << " " << prevBound->end << " " << prevBound->pos << endl;
-        cout << "next bound: " << nextBound->start << " " << nextBound->end << " " << nextBound->pos << endl;
-    }
-    */
-    int boundaryTop = _boundingRect.getTop();
-    int boundaryBottom = _boundingRect.getBottom();
-
-    for(size_t i = 0; i < _boundVec.size(); ++i){
-        /* direction of bound is horizontal */
-        if(_boundVec[i]->getDirection() == H){
-            int start = _boundVec[i]->start;
-            int end = _boundVec[i]->end;
-            int pos = _boundVec[i]->getPos();
-            
-            /* build upper boundary tile */
-            if(start < end && pos < boundaryTop){
-                Rectangle rect(start, pos, end, boundaryTop);
-                CornerStitch::insertTile(&rect, _plane);
-
-                // add boundary component for TCG
-                Component* newBoundaryComp = new Component(rect.getLeft(), rect.getBottom(), rect.getWidth(), rect.getHeight());
-                newBoundaryComp->name = "boundaryComp";
-                newBoundaryComp->type = FIXED;
-                _boundaryComp.push_back(newBoundaryComp);
-            }
-            
-            /* build lower boundary tile */
-            if(start > end && pos > boundaryBottom){
-                Rectangle rect(end, boundaryBottom, start, pos);
-                CornerStitch::insertTile(&rect, _plane);
-
-                // add boundary component for TCG
-                Component* newBoundaryComp = new Component(rect.getLeft(), rect.getBottom(), rect.getWidth(), rect.getHeight());
-                newBoundaryComp->name = "boundaryComp";
-                newBoundaryComp->type = FIXED;
-                _boundaryComp.push_back(newBoundaryComp);
-            }
-        }
+        boundaryTile->setTileType(TileType::Boundary);
     }
 }
 
@@ -153,7 +107,7 @@ void
 Preprocessor::insertBoundaryCompnent(int lower_x, int lower_y, int width, int height, vector<Component*>& vec)
 {
 	Component *add_fs = new Component(lower_x, lower_y, width, height);
-	add_fs->type = FIXED;
+    add_fs->type = FIXED;
 	add_fs->name = "boundaryComp";
 	
 	//cout << "insert: " << add_fs->get_ll_x() << " " << add_fs->get_ll_y() << " " << add_fs->getWidth() << " " << add_fs->getHeight() << endl;
