@@ -1,0 +1,45 @@
+MACRO c0
+     SIZE 1 BY 1 ;
+END c0
+
+MACRO c1
+     SIZE 14 BY 16 ;
+END c1
+
+MACRO c2
+     SIZE 6 BY 16 ;
+END c2
+
+MACRO c3
+     SIZE 10 BY 16 ;
+END c3
+
+MACRO c4
+     SIZE 2 BY 16 ;
+END c4
+
+MACRO c5
+     SIZE 12 BY 16 ;
+END c5
+
+MACRO c6
+     SIZE 8 BY 16 ;
+END c6
+
+MACRO c7
+     SIZE 4 BY 16 ;
+END c7
+
+MACRO c8
+     SIZE 18 BY 16 ;
+END c8
+
+MACRO c9
+     SIZE 20 BY 16 ;
+END c9
+
+MACRO c10
+     SIZE 16 BY 16 ;
+END c10
+
+END LIBRARY

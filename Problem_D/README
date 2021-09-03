@@ -1,0 +1,7 @@
+Step0: You would see the binary executable file "cadb0133_final" in the current directory. (if not, please run 'make').
+
+Step1: put the def, lef, txt files in the current directory.
+
+Step2: ./cadb0133_final caseX.def caseX.lef caseX.txt outX.def
+
+After step2 is done, outX.def is generated in the current directory.

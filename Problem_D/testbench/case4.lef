@@ -1,0 +1,13 @@
+MACRO c3
+     SIZE 1 BY 2 ;
+END c3
+ 
+MACRO c1
+     SIZE 5 BY 3 ;
+END c1
+ 
+MACRO c2
+     SIZE 1 BY 6 ;
+END c2
+
+END LIBRARY

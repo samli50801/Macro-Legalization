@@ -1,0 +1,17 @@
+MACRO c0
+     SIZE 4 BY 6 ;
+END c0
+ 
+MACRO c1
+     SIZE 7 BY 4 ;
+END c1
+ 
+MACRO c2
+     SIZE 2 BY 3 ;
+END c2
+
+MACRO c3
+     SIZE 6 BY 3 ;
+END c3
+
+END LIBRARY

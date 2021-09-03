@@ -1,0 +1,38 @@
+VERSION 5.7 ;
+DESIGN case4 ;
+UNITS DISTANCE MICRONS 1 ;
+
+DIEAREA ( 0 0 ) ( 20 30 ) ;
+
+COMPONENTS 11 ;
+   - m1 c1 
+      + FIXED ( 15 2 ) N ;
+   - m2 c1 
+      + FIXED ( 15 8 ) N ;
+   - m3 c1 
+      + FIXED ( 15 14 ) N ;
+
+   - m4 c2 
+      + PLACED ( 17 0 ) N ;
+   - m5 c2 
+      + PLACED ( 17 1 ) N ;
+
+   - m6 c3 
+      + PLACED ( 17 6 ) N ;
+   - m7 c3 
+      + PLACED ( 17 7 ) N ;
+
+   - m8 c2 
+      + PLACED ( 17 17 ) N ;
+   - m9 c2 
+      + PLACED ( 17 21 ) N ;
+   - m10 c2 
+      + PLACED ( 17 27 ) N ;
+   - m10 c2 
+      + PLACED ( 19 27 ) N ;
+
+END COMPONENTS
+
+
+END DESIGN
+

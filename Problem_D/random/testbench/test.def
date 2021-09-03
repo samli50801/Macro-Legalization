@@ -1,0 +1,21 @@
+VERSION 5.7 ;
+DESIGN test_case ;
+UNITS DISTANCE MICRONS 1 ;
+
+DIEAREA ( 0 0 ) ( 20 20 ) ;
+
+COMPONENTS 11 ;
+   - A c0 
+      + PLACED ( 2 2 ) N ;
+   - B c1
+      + PLACED ( 3 6 ) N ;
+   - C c2
+      + PLACED ( 9 5 ) N ;
+   - D c3
+      + PLACED ( 5 4 ) N ;
+   
+END COMPONENTS
+
+
+END DESIGN
+
