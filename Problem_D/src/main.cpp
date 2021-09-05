@@ -63,6 +63,8 @@ int main(int argc, char* argv[])
     preprocessor.run();
 	//preprocessor.buildBoundaryComponent();
 	boundaryComp = preprocessor.getBoundaryComp();
+
+	plot(preprocessor.getBoundingRect());
 	
 	// For corner-stitching
 	Force_Directed fd(parser._mcsbmc * parser.dbuPerMicron);
@@ -73,25 +75,28 @@ int main(int argc, char* argv[])
 	duration_sec = double(end-start) / CLOCKS_PER_SEC;	// time
 	Log << "Force-directed: " << duration_sec << "sec" << endl;
 
+	plot(preprocessor.getBoundingRect());
+	//plot(preprocessor.getBoundingRect());
+
 	cg::CG cg(comp, boundaryComp, parser);
 	cg.legalize();
 	cg.optBufferArea();
 	deletePoint = cg.deletedPoint;		// Debug
 
-    //plot(preprocessor.getBoundingRect());
-    //parser.score_evaluation(comp, not_free_space);
+	//plot(preprocessor.getBoundingRect());
 
-    Legalizer legalizer(comp, 
+    Legalizer legalizer(comp,
             preprocessor.getPlane(), 
             preprocessor.getBoundingRect(),
-            parser._mcsbmc * parser.dbuPerMicron);
+            parser);
 
 	start = clock();	// time
-	legalizer.legalize();
+	legalizer.legalize(deletePoint);
 	end = clock();	// time
 	duration_sec = double(end-start) / CLOCKS_PER_SEC;	// time
 	Log << "corner-stitch: " << duration_sec << "sec" << endl;
-    //legalizer.plot();
+	plot(preprocessor.getBoundingRect());
+	//plot(preprocessor.getBoundingRect());
 
 	buffer::BufferLegalizer bufferLegalizer(bound, comp, boundaryComp, parser);
 	bufferLegalizer.legalize();
@@ -99,7 +104,28 @@ int main(int argc, char* argv[])
 	free_space = bufferLegalizer.getFreeSpace();
 	not_free_space = bufferLegalizer.getDeadSpace();
 	deletePoint = bufferLegalizer.getDeletedComp();		// Debug
+	cout << "illegal: " << illegal.size() << endl;
+	plot(preprocessor.getBoundingRect());
 
+    preprocessor.resetPlane();
+    legalizer.needCheckBuffer();
+    legalizer.buildBufferPlane(free_space, preprocessor.getBufferPlane());
+    legalizer.setPlane(preprocessor.getPlane());
+    legalizer.legalize(deletePoint);
+	cout << "comp size: " << comp.size() << endl;
+    //legalizer.plot();
+    //legalizer.bufferPlot();
+
+	/* gnuplot */
+	plot(preprocessor.getBoundingRect());
+
+	buffer::BufferLegalizer bufferLegalizer2(bound, comp, boundaryComp, parser);
+	bufferLegalizer2.legalize();
+	illegal = bufferLegalizer2.getIllegal();
+    if(illegal.empty())
+		cout << "Successfully buffer legalize\n";
+    else
+		cout << "Fail to legalize\n";
 	/*check if the final placement is legal (no overlappings) */
 	fd.generate_overlap_group();		// Generate overlapped group
 	overlapGroup = fd.getGroup();
@@ -108,16 +134,11 @@ int main(int argc, char* argv[])
 	else 
 		cout << "Fail to legalize\n";
 
-	/* gnuplot */
-	//plot(preprocessor.getBoundingRect());
-
 	parser.recoverCoordinateSystem(comp);
 	parser.writeDef(output, comp);
 
     parser.score_evaluation(comp, not_free_space);
 
-	/* gnuplot */
-	plot(preprocessor.getBoundingRect());
 
 	return 0;
 }
@@ -168,7 +189,6 @@ void plot(Rectangle boundingRect){
 		}
 	}*/
  	for (vector<Component*>::iterator i = comp.begin(); i != comp.end(); i++) {
-
 		string NodeName = (*i)->getName();
 	    int x0 = (*i)->get_ll_x();
 	    int y0 =  (*i)->get_ll_y();
@@ -177,11 +197,11 @@ void plot(Rectangle boundingRect){
 		int midX = (x0+x1)/2;
 		int midY = (y0+y1)/2;
 
-		/*if (isInOverlapGroup(*i)){
+		if (isInOverlapGroup(*i)){
 			outgraph << "set object " << index << " rect from " 
 		  		<< x0 << "," << y0 << " to " << x1 << "," << y1 << " fs empty border lc rgb '#ff0000'\n";
 				//<< "set label " << "\"" << NodeName << "\"" << " at " << midX << "," << midY << " center " << "font \",8\"\n";
-		}else {*/
+		}else {
 			if ((*i)->getType() == FIXED) {
 				outgraph << "set object " << index << " rect from " 
 		  		<< x0 << "," << y0 << " to " << x1 << "," << y1 << " fs empty border lc rgb 'green'\n";
@@ -190,7 +210,7 @@ void plot(Rectangle boundingRect){
 		  		<< x0 << "," << y0 << " to " << x1 << "," << y1 << " fs empty border lc rgb '#000000'\n";
 				//<< "set label " << "\"" << NodeName << "\"" << " at " << midX << "," << midY << " center " << "font \",8\"\n";
 			}
-		/*}*/
+		}
 		
 		index++;
 	}
@@ -229,7 +249,7 @@ void plot(Rectangle boundingRect){
 	}
 	
 	/* boundary component*/
-	/*for (auto it = boundaryComp.begin(); it != boundaryComp.end(); ++it) {
+	for (auto it = boundaryComp.begin(); it != boundaryComp.end(); ++it) {
 		int x0 = (*it)->get_ll_x();
 	    int y0 =  (*it)->get_ll_y();
 		int x1 = (*it)->get_ur_x();
@@ -241,7 +261,7 @@ void plot(Rectangle boundingRect){
 		  	<< x0 << "," << y0 << " to " << x1 << "," << y1 << " fc rgb 'red'\n";
 	
 		index++;  
-	}*/
+	}
 
 	/* dead space*/
 	for (auto it = not_free_space.begin(); it != not_free_space.end(); ++it) {

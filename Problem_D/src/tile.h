@@ -60,6 +60,23 @@ namespace CornerStitch{
             /* enlarge or shrink the rectangle area */
             void scale(int range);
             void scaleUR(int range);
+            
+            void translate(int dx, int dy){
+                _ll._x += dx;
+                _ur._x += dx;
+                _ll._y += dy;
+                _ur._y += dy;
+            }
+
+            bool overlap(Rectangle& rect){
+                int x = MAX(getLeft() - rect.getRight(), rect.getLeft() - getRight());
+                int y = MAX(getBottom() - rect.getTop(), rect.getBottom() - getTop());
+
+                if(MAX(x, y) < 0)
+                    return true;
+                else
+                    return false;
+            }
 
             void print() { _ll.print(); cout << " - > "; _ur.print(); cout << endl; }
         
@@ -67,7 +84,7 @@ namespace CornerStitch{
             Point   _ur;    // upper-right corner of rectangle
     };
 
-    enum class TileType { Invalid, Space, Macro, Boundary };
+    enum class TileType { Invalid, Space, Macro, Boundary, Buffer };
 
     /* 
      *
@@ -152,52 +169,124 @@ namespace CornerStitch{
      * isn't Space, then _isAllSpace is false.
      *
      */
-    class TileIsSpaceOp : public TileOp{
+    class TileIsAllOp : public TileOp{
         public:
-            TileIsSpaceOp(bool &isAllSpace) : _isAllSpace(isAllSpace) {}
-            virtual ~TileIsSpaceOp() {}
+            TileIsAllOp(bool &isAll, vector<TileType> tileTypeVec) : 
+                _isAll(isAll), _tileTypeVec(tileTypeVec) {}
+            virtual ~TileIsAllOp() {}
 
             virtual int operator() (Tile* tile){
-                if(tile->_tileType != TileType::Space){
-                    _isAllSpace = false;
-                    return 1;
+                bool isOneOfType = false;
+                for(size_t i = 0; i < _tileTypeVec.size(); ++i){
+                    if(tile->getTileType() == _tileTypeVec[i]){
+                        isOneOfType = true;
+                        break;
+                    }
                 }
-                return 0;
+
+                if(isOneOfType)
+                    return 0;
+
+                _isAll = false;
+                return 1;
             }
 
         private:
-            bool&   _isAllSpace; 
+            bool&                  _isAll;
+            vector<TileType>       _tileTypeVec;
     };
 
         
     /*
      *
-     *
+     * tile not macro operation: for each tile being traversed, check whether 
+     * the tile type is TileType::Macro or not. if one of tile type
+     * is Macro, then _noneMacro is false.
      *
      */
-    class TileNotMacroOp : public TileOp{
+    class TileIsAllNotOp : public TileOp{
         public:
-            TileNotMacroOp(bool &noneMacro) : _noneMacro(noneMacro) {}
-            virtual ~TileNotMacroOp() {}
+            TileIsAllNotOp(bool &isAllNot, vector<TileType> tileTypeVec) : 
+                _isAllNot(isAllNot), _tileTypeVec(tileTypeVec) {}
+            virtual ~TileIsAllNotOp() {}
 
             virtual int operator() (Tile* tile){
-                if(tile->_tileType == TileType::Macro){
-                    _noneMacro = false;
+                bool isOneOfType = false;
+                for(size_t i = 0; i < _tileTypeVec.size(); ++i){
+                    if(tile->getTileType() == _tileTypeVec[i]){
+                        isOneOfType = true;
+                        break;
+                    }
+                }
+
+                if(isOneOfType){
+                    _isAllNot = false;
+                    return 1;
+                }
+
+                return 0;
+            }
+
+        private:
+            bool&                  _isAllNot;
+            vector<TileType>       _tileTypeVec;
+    };
+
+
+    /*
+     *
+     * tile is buffer operation: for each tile being traversed, check whether 
+     * the tile type is TileType::Buffer or not. if one of tile type
+     * is Buffer, then _hasBuffer is true.
+     *
+     */
+    class TileIsBufferOp : public TileOp{
+        public:
+            TileIsBufferOp(bool &hasBuffer) : _hasBuffer(hasBuffer) {}
+            virtual ~TileIsBufferOp() {}
+
+            virtual int operator() (Tile* tile){
+                if(tile->_tileType == TileType::Buffer){
+                    _hasBuffer = true;
                     return 1;
                 }
                 return 0;
             }
 
         private:
-            bool& _noneMacro;
+            bool&   _hasBuffer;
     };
+
+    
+    /*
+     *
+     *
+     *
+     */
+    class TileAllBufferOp : public TileOp{
+        public:
+            TileAllBufferOp(bool &isAllBuffer) : _isAllBuffer(isAllBuffer) {}
+            virtual ~TileAllBufferOp() {}
+
+            virtual int operator() (Tile* tile){
+                if(tile->getTileType() != TileType::Buffer){
+                    _isAllBuffer = false;
+                    return 1;
+                }
+                return 0;
+            }
+
+        private:
+            bool&   _isAllBuffer;
+    };
+
 
 
     /*
      *
      * tile fill operation:
      *
-     * */
+     */
     class TileFillOp: public TileOp{
         public:
             TileFillOp(vector<Rectangle>& rectVec, Rectangle& fillRegion) 
@@ -219,13 +308,32 @@ namespace CornerStitch{
             Rectangle&          _fillRegion;
     };
 
+    
+    /*
+     *
+     * 
+     *
+     */
+    class TileGetOp: public TileOp{
+        public:
+            TileGetOp(vector<Tile*>& tileVec) : _tileVec(tileVec){}
+            virtual ~TileGetOp() {};
+
+            virtual int operator() (Tile* tile){
+                _tileVec.push_back(tile);
+                return 0;
+            }
+
+        private:
+            vector<Tile*>& _tileVec;
+    };
+
 
     /*
      *
      * CornerStitching defines a series of operations on Plane and Tile.
      *
      */
-
 
     Tile* searchPoint(Tile* hintTile, Plane* plane, Point* point);
     int searchArea(Tile* hintTile, Plane* plane, Rectangle* rect, TileOp* tileOp);
@@ -234,7 +342,10 @@ namespace CornerStitch{
 
     bool searchAreaAllSpace(Tile* hintTile, Plane* plane, Rectangle* rect);
     bool searchAreaNoMacro(Tile* hintTile, Plane* plane, Rectangle* rect);
-    void fillArea(Tile* hintTile, Plane* plane, Rectangle* rect);
+    bool searchAreaHasBuffer(Tile* hintTile, Plane* plane, Rectangle* rect);
+    bool searchAreaAllBuffer(Tile* hintTile, Plane* plane, Rectangle* rect);
+    void fillMinspace(Tile* hintTile, Plane* plane, Rectangle* rect);
+    bool searchBufferArea(Tile* hintTile, Plane* plane, Rectangle* rect);
 
 };
 

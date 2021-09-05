@@ -314,10 +314,15 @@ namespace CornerStitch{
 
     /*
      *
-     * */
+     * if type of all tiles in the region rect are Space, return true
+     *
+     */
     bool searchAreaAllSpace(Tile* hintTile, Plane* plane, Rectangle* rect){
         bool isAllSpace = true;
-        TileOp* tileOp = new TileIsSpaceOp(isAllSpace);
+        vector<TileType> tileTypeVec;
+        tileTypeVec.push_back(TileType::Space);
+
+        TileOp* tileOp = new TileIsAllOp(isAllSpace, tileTypeVec);
 
         searchArea(hintTile, plane, rect, tileOp);
 
@@ -326,14 +331,18 @@ namespace CornerStitch{
         return isAllSpace;
     }
 
+
     /*
      *
-     *
+     * if none of type of tiles in the region rect are Macro, return true
      *
      */
     bool searchAreaNoMacro(Tile* hintTile, Plane* plane, Rectangle* rect){
         bool noneMacro = true;
-        TileOp* tileOp = new TileNotMacroOp(noneMacro);
+        vector<TileType> tileTypeVec;
+        tileTypeVec.push_back(TileType::Macro);
+
+        TileOp* tileOp = new TileIsAllNotOp(noneMacro, tileTypeVec);
 
         searchArea(hintTile, plane, rect, tileOp);
 
@@ -341,7 +350,23 @@ namespace CornerStitch{
 
         return noneMacro;
     }
+    
 
+    /*
+     *
+     * if at least one type of tile in the region rect is Buffer, return true
+     *
+     */
+    bool searchAreaHasBuffer(Tile* hintTile, Plane* plane, Rectangle* rect){
+        bool hasBuffer = false;
+        TileOp* tileOp = new TileIsBufferOp(hasBuffer);
+
+        searchArea(hintTile, plane, rect, tileOp);
+
+        delete tileOp;
+
+        return hasBuffer;
+    }
 
 
     /*
@@ -349,7 +374,24 @@ namespace CornerStitch{
      *
      *
      */
-    void fillArea(Tile* hintTile, Plane* plane, Rectangle* rect){
+    bool searchAreaAllBuffer(Tile* hintTile, Plane* plane, Rectangle* rect){
+        bool isAllBuffer = true;
+        TileOp* tileOp = new TileAllBufferOp(isAllBuffer);
+
+        searchArea(hintTile, plane, rect, tileOp);
+
+        delete tileOp;
+
+        return isAllBuffer;
+    }
+
+
+    /*
+     *
+     *
+     *
+     */
+    void fillMinspace(Tile* hintTile, Plane* plane, Rectangle* rect){
         vector<Rectangle> fillRegionVec;
         TileOp* tileOp = new TileFillOp(fillRegionVec, *rect);
 
@@ -357,8 +399,25 @@ namespace CornerStitch{
 
         delete tileOp;
 
-        for(size_t i = 0; i < fillRegionVec.size(); ++i)
-            insertTile(&fillRegionVec[i], plane);
+        for(size_t i = 0; i < fillRegionVec.size(); ++i){
+            Tile* minspaceTile = insertTile(&fillRegionVec[i], plane);
+        }
+    }
+
+    /*
+     *
+     *
+     *
+     */
+    bool searchBufferArea(Tile* hintTile, Plane* plane, Rectangle* rect){
+        bool hasBuffer = false;
+        TileOp* tileOp = new TileIsBufferOp(hasBuffer);
+
+        searchArea(hintTile, plane, rect, tileOp);
+
+        delete tileOp;
+
+        return hasBuffer;
     }
 
 

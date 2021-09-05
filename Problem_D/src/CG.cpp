@@ -644,7 +644,8 @@ void CG::deleteEdge(vector<pair<size_t, int>>& adjEdge, Point* p)
 void CG::deletePoint(Point* p, bool graphType)
 {
     cout << "delete point: " << p->_comp->name << endl;
-    deletedPoint.push_back(p->_comp);
+	if (!startBufferAreaLeg)
+		deletedPoint.push_back(p->_comp);
 
     /* cannot delete fixed block */
     if (p->_comp->type == FIXED) 
@@ -1708,7 +1709,7 @@ void CG::stickToBoundary()
         Component* macro = _pointVec[it->first]->_comp;
         Component* boundary = _hsource->_comp;
         int distance = macro->get_ll_x() - boundary->get_ll_x();
-        if (distance < _pwc)
+        if (macro->getType() != FIXED && distance < _pwc)
             macro->_llx = boundary->get_ll_x();
     }
     for (vector<pair<size_t, int>>::iterator it = _hsink->_left.begin(); it != _hsink->_left.end(); ++it) {
@@ -1716,7 +1717,7 @@ void CG::stickToBoundary()
         Component* macro = _pointVec[it->first]->_comp;
         Component* boundary = _hsink->_comp;
         int distance = boundary->get_ll_x() - macro->get_ur_x();
-        if (distance < _pwc)
+        if (macro->getType() != FIXED && distance < _pwc)
             macro->_llx = boundary->get_ll_x() - macro->getWidth();
     }
     for (vector<pair<size_t, int>>::iterator it = _vsource->_up.begin(); it != _vsource->_up.end(); ++it) {
@@ -1724,7 +1725,7 @@ void CG::stickToBoundary()
         Component* macro = _pointVec[it->first]->_comp;
         Component* boundary = _vsource->_comp;
         int distance = macro->get_ll_y() - boundary->get_ll_y();
-        if (distance < _pwc)
+        if (macro->getType() != FIXED && distance < _pwc)
             macro->_lly = boundary->get_ll_y();
     }
     for (vector<pair<size_t, int>>::iterator it = _vsink->_down.begin(); it != _vsink->_down.end(); ++it) {
@@ -1732,76 +1733,11 @@ void CG::stickToBoundary()
         Component* macro = _pointVec[it->first]->_comp;
         Component* boundary = _vsink->_comp;
         int distance = boundary->get_ll_y() - macro->get_ur_y();
-        if (distance < _pwc)
+        if (macro->getType() != FIXED && distance < _pwc)
             macro->_lly = boundary->get_ll_y() - macro->getHeight();
     }
 }
 
-void CG::legalize()
-{
-    clock_t start, end;
-    double lp_runtime = 0.0;
-
-    do {
-        start = clock();
-
-        /* static*/
-        lastDeletedPoint = deletedPoint;
-        /* reset source*/
-        deletedPoint.clear();
-        /* initialize */
-        initialize();
-        /* build TCG */
-        buildGraph();
-        /* delete point to make TCG fit in the boundary */
-        legalizeCriticalPath();
-        /* linear programming solver */
-        solveLPbyCG();
-        stickToBoundary();
-
-        /* reset source*/
-        delete _hsource;
-        _hsource = NULL;
-        delete _vsource;
-        _vsource = NULL;
-        delete _hsink;
-        _hsink = NULL;
-        delete _vsink;
-        _vsink = NULL;
-
-        end = clock();
-        lp_runtime += double(end-start) / CLOCKS_PER_SEC;
-
-    } while(lastDeletedPoint != deletedPoint && lp_runtime < 180.0);
-
-}
-
-void CG::optBufferArea()
-{
-    /* reset source*/
-    delete _hsource;
-    _hsource = NULL;
-    delete _vsource;
-    _vsource = NULL;
-    delete _hsink;
-    _hsink = NULL;
-    delete _vsink;
-    _vsink = NULL;
-
-    startBufferAreaOpt = true;
-    /* optimize dead space*/
-    //initialize
-    initialize();
-    // build TCG 
-    buildGraph();
-    deletedPoint.clear();
-    // delete point to make TCG fit in the boundary
-    legalizeCriticalPath();
-    // linear programming solver 
-    solveLPbyCG();
-    stickToBoundary();
-    startBufferAreaOpt = false;
-}
 
 void CG::leaveSpaceForBufferArea(vector<Component*>& illegal)
 {
@@ -1929,13 +1865,83 @@ void CG::leaveSpaceForBufferArea(vector<Component*>& illegal)
         longestVPath = getVLongestPath(_vsource, v_end);
     }
     
-
     /* Debug */
     /*longestHPath = getHLongestPath(_hsource, h_end);
     cout << "final H critical length: " << longestHPath << " / " << _designRight << endl;
     longestVPath = getVLongestPath(_vsource, v_end);
     cout << "final V critical length: " << longestVPath << " / " << _designUp << endl;*/
 }
+
+
+void CG::legalize()
+{
+	clock_t start, end;
+	double lp_runtime = 0.0;
+
+	do {
+		start = clock();
+
+		/* static*/
+		lastDeletedPoint = deletedPoint;
+		/* reset source*/
+		deletedPoint.clear();
+		/* initialize */
+		initialize();
+		/* build TCG */
+		buildGraph();
+		/* delete point to make TCG fit in the boundary */
+		legalizeCriticalPath();
+		/* linear programming solver */
+		solveLPbyCG();
+		stickToBoundary();
+
+		/* reset source*/
+		delete _hsource;
+		_hsource = NULL;
+		delete _vsource;
+		_vsource = NULL;
+		delete _hsink;
+		_hsink = NULL;
+		delete _vsink;
+		_vsink = NULL;
+
+		end = clock();
+		lp_runtime += double(end - start) / CLOCKS_PER_SEC;
+
+		/*for (size_t i = 0; i < _pointVec.size(); ++i)
+			delete _pointVec[i];*/
+
+	} while (lastDeletedPoint != deletedPoint && lp_runtime < 60.0); //180.0
+
+}
+
+void CG::optBufferArea()
+{
+	/* reset source*/
+	delete _hsource;
+	_hsource = NULL;
+	delete _vsource;
+	_vsource = NULL;
+	delete _hsink;
+	_hsink = NULL;
+	delete _vsink;
+	_vsink = NULL;
+
+	startBufferAreaOpt = true;
+	/* optimize dead space*/
+	//initialize
+	initialize();
+	// build TCG 
+	buildGraph();
+	deletedPoint.clear();
+	// delete point to make TCG fit in the boundary
+	legalizeCriticalPath();
+	// linear programming solver 
+	solveLPbyCG();
+	stickToBoundary();
+	startBufferAreaOpt = false;
+}
+
 
 void CG::legalizeBufferConstraint(vector<Component*>& illegal)
 {
@@ -1944,9 +1950,15 @@ void CG::legalizeBufferConstraint(vector<Component*>& illegal)
     initialize();
     // build TCG 
     buildGraph();
-    deletedPoint.clear();
+	for (vector<Component*>::iterator it = deletedPoint.begin(); it != deletedPoint.end(); ++it) {
+		size_t index = std::find(_compVec.begin(), _compVec.end(), *it) - _compVec.begin();
+		deletePoint(_pointVec[index], V);
+		cout << (*it)->name << endl;
+	}
     // delete point to make TCG fit in the boundary 
+	startBufferAreaLeg = false;
     leaveSpaceForBufferArea(illegal);
+	startBufferAreaLeg = true;
     // linear programming solver 
     solveLPbyCG();
 

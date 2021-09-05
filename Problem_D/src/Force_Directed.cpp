@@ -849,9 +849,11 @@ void Force_Directed::macro_boundary_checker(Component *c, bool &isAllInBoundary)
 			}
 		}
 		cout << "min: " << min.first << " " << min.second << endl;
-		c->_llx += min.first;
-		c->_lly += min.second;
-		c->_originX = c->_llx;
-		c->_originY = c->_lly;
+		if (c->getType() != FIXED) {
+			c->_llx += min.first;
+			c->_lly += min.second;
+			c->_originX = c->_llx;
+			c->_originY = c->_lly;
+		}
 	}
 }

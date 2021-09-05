@@ -7,18 +7,44 @@
  *
  *
  */
+void Preprocessor::resetPlane(){
+    Rectangle worldRegion(NINF + 1, NINF + 1, INF, INF);
+    vector<Tile*> tileVec;
+    TileOp* tileOp = new TileGetOp(tileVec);
+
+    CornerStitch::searchArea(NULL, _plane, &worldRegion, tileOp);
+
+    delete tileOp;
+
+    for(size_t i = 0; i < tileVec.size(); ++i)
+        delete tileVec[i];
+
+    delete _plane;
+
+    _plane = new Plane(_boundingRect);
+    buildBoundaryTile(_plane);
+}
+
+
+/*
+ *
+ *
+ *
+ */
 void Preprocessor::run(){
     /* build the bounding box of the design */
     buildBoundingRect();
 
     /* build the tile plane with _boundingRect */
     _plane = new Plane(_boundingRect);
+    _bufferPlane = new Plane(_boundingRect);
 
     /* build the boundary component */
     buildBoundaryComponent();
 
     /* build the boundary tiles in _plane */
-    buildBoundaryTile();
+    buildBoundaryTile(_plane);
+    buildBoundaryTile(_bufferPlane);
 }
 
 
@@ -84,10 +110,10 @@ void Preprocessor::buildBoundingRect(){
 
 /*
  *
- * build boundary tile on _plane using boundary component.
+ * build boundary tile on plane using boundary component.
  *
  */
-void Preprocessor::buildBoundaryTile(){
+void Preprocessor::buildBoundaryTile(Plane* plane){
 
     /* each boundary component constructs a boundary tile in _plane */
     Rectangle boundaryRect;
@@ -97,7 +123,7 @@ void Preprocessor::buildBoundaryTile(){
                 _boundaryComp[i]->get_ur_x(),
                 _boundaryComp[i]->get_ur_y());
 
-        Tile* boundaryTile =CornerStitch::insertTile(&boundaryRect, _plane);
+        Tile* boundaryTile =CornerStitch::insertTile(&boundaryRect, plane);
 
         boundaryTile->setTileType(TileType::Boundary);
     }

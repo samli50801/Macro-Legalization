@@ -214,8 +214,8 @@ public:
 	void addForce(double _cx, double _cy) { _force.first += _cx; _force.second += _cy; }
 	void expandWidth(double ex) { width += ex; _llx -= ex / 2; }
 	void expandHeight(double ex) { height += ex; _lly -= ex / 2; }
-	void shrinkWidth(int shrink) { width -= shrink; _llx += shrink / 2; }
-	void shrinkHeight(int shrink) { height -= shrink; _lly += shrink / 2;}
+	void shrinkWidth(double shrink) { width -= shrink; _llx += shrink / 2; }
+	void shrinkHeight(double shrink) { height -= shrink; _lly += shrink / 2;}
 
 	// Debug 
 	void print_x_interval() { cout << _cx - 0.5 * width << "~" << _cx + 0.5 * width; }

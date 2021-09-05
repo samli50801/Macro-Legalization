@@ -26,10 +26,10 @@ namespace buffer {
         vector<Bound*>&     _boundary;
         vector<Component*>& _boundaryComp;
 
-        unordered_set<Component*> _freeSpace;
-        unordered_set<Component*> _deadSpace;
-        vector<Component*>  _deletedComp;
-        vector<Component*>  _illegal;
+        unordered_set<Component*> _freeSpace;   // can place standard cell
+        unordered_set<Component*> _deadSpace;   // cannot place standard cell
+        vector<Component*>  _deletedComp;   // the macro deleted from TCG, who doesn't meet buffer area constraint
+        vector<Component*>  _illegal;       // the macro who violates buffer area constraint
     };
 
 };

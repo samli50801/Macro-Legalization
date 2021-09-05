@@ -36,6 +36,10 @@ namespace cg {
             _designDown = parser.minOfHeight;
             _designUp = parser.maxOfHeight;
         };
+        ~CG() 
+        {
+            
+        }
 
         /**/
         void cal_leftMost();

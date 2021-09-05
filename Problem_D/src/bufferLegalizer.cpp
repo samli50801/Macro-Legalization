@@ -28,6 +28,10 @@ void BufferLegalizer::findIllegal()
     // each macro
     for (vector<Component*>::iterator compIter = _compVec.begin(); compIter != _compVec.end(); ++compIter) {
         Component* comp = *compIter;
+
+		if (std::find(_deletedComp.begin(), _deletedComp.end(), comp) != _deletedComp.end())
+			continue;
+
         bool legal = false;
         // each free space
         for (unordered_set<Component*>::iterator fsIter = _freeSpace.begin(); fsIter != _freeSpace.end(); ++fsIter) {
@@ -43,6 +47,11 @@ void BufferLegalizer::findIllegal()
     }
 }
 
+/*
+*
+* all macros excluding deleted macros meet buffer area constraint
+*
+*/
 void BufferLegalizer::legalize()
 {
     /* find free space */
@@ -55,15 +64,37 @@ void BufferLegalizer::legalize()
     findIllegal();
 
     /* loop until black macros are all meet the buffer area constraint*/
+    cg::CG cg(_compVec, _boundaryComp, _parser);
+
+	fstream file("delete.txt", ios::out);
+
     while(!_illegal.empty()) {
-        cg::CG cg(_compVec, _boundaryComp, _parser);
+
+		//file << count << "'s BufferLegalizer" << endl;
+		
         cg.legalizeBufferConstraint(_illegal);
+
         _deletedComp = cg.deletedPoint;
 
+		/*file << "_deletedComp size: " << _deletedComp.size() << endl;
+		cout << "_deletedComp size: " << _deletedComp.size() << endl;
+		for (auto i = _deletedComp.begin(); i != _deletedComp.end(); ++i) {
+			file << (*i)->name << endl;
+			cout << (*i)->name << endl;
+		}*/
+
         fs._deletedComp = _deletedComp;
+		/*file << "fs._deletedComp size: " << fs._deletedComp.size() << endl;
+		cout << "fs._deletedComp size: " << fs._deletedComp.size() << endl;*/
+
         fs.findFreeSpace();
         _freeSpace = fs.getFreeSpace();
 	    _deadSpace = fs.getNotFreeSpace();
         findIllegal();
+
+		/*file << "Illegal size: " << _illegal.size() << endl;
+		for (auto i = _illegal.begin(); i != _illegal.end(); ++i) {
+			file << (*i)->name << endl;
+		}*/
     }
 }

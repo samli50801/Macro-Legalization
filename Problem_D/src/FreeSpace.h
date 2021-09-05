@@ -9,8 +9,8 @@ public:
 
 	FreeSpace(vector<Component*>& c, vector<Bound*>& b, Parser& p, vector<Component*>& deletedComp) : 
 	comp(c), bound(b), parser(p), _deletedComp(deletedComp)
-	{ opt = true; }
-	
+	{ opt = false; startGenFreeSpace = false;}
+
 	~FreeSpace() {}
 
 	// Get
@@ -38,6 +38,7 @@ public:
 	unordered_set<Component*> not_free_space;
 
 	bool opt;
+	bool startGenFreeSpace;
 
 };
 

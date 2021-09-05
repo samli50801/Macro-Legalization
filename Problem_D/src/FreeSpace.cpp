@@ -35,10 +35,13 @@ FreeSpace::insertFreeSpace(int lower_x, int lower_y, int width, int height, bool
 	Component *add_fs = new Component(lower_x, lower_y, width, height);
 	add_fs->type = FIXED;
 	add_fs->name = "ADDED";
-	/*DEBUG("add freespace: " << add_fs->get_ll_x() << " " << add_fs->get_ll_x() + add_fs->width << " " << add_fs->get_ll_y() << " " << add_fs->height << endl;)*/
+	/*DEBUG("add freespace: " << add_fs->get_ll_x() << " " << add_fs->get_ll_x() + add_fs->width << " "
+	<< add_fs->get_ll_y() << " " << add_fs->height << endl;)*/
 
 	if (width == 0 || height == 0)
 		return;
+
+	
 	if (type == V) {
 		if (add_fs->width < parser._pwc * parser.dbuPerMicron) 
 			not_free_space.insert(add_fs);
@@ -48,7 +51,7 @@ FreeSpace::insertFreeSpace(int lower_x, int lower_y, int width, int height, bool
 	else if (type == H) {
 		if (add_fs->height < parser._pwc * parser.dbuPerMicron)
 			not_free_space.insert(add_fs);
-		else 
+		else if (startGenFreeSpace)
 			free_space.insert(add_fs);
 	}
 }
@@ -639,12 +642,20 @@ FreeSpace::horizon_freeSpace()
 void 
 FreeSpace::findFreeSpace()
 {	
+	/* reset*/
 	free_space.clear();
 	not_free_space.clear();
-	opt = false;
-	for (size_t i = 0; i < 2; ++i) {
+
+	startGenFreeSpace = false;
+
+	int lastSize = 0;
+
+	do {
+		lastSize = not_free_space.size();
 		vertical_freeSpace();
 		horizon_freeSpace();
-		//opt = false;
-	}
+	} while (lastSize != not_free_space.size());
+
+	startGenFreeSpace = true;
+	horizon_freeSpace();
 }
