@@ -2,7 +2,7 @@
 #define CG_H
 #include "parser.h"
 #include <time.h>
-
+/**/
 namespace cg {
 
     class Point{
