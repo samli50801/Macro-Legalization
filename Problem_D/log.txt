@@ -1,2 +1,0 @@
-Force-directed: 11.5225sec
-corner-stitch: 2.58853sec
